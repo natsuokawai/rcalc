@@ -33,6 +33,7 @@ module Rcalc
           pos = scanner.pos
           str = scanner.scan(REGEXP_NUM)
           tokens << Token.new(TOKEN_NUM, str, pos)
+          next
         end
 
         # tokenize +, -, *, /, (, )
@@ -40,7 +41,10 @@ module Rcalc
           pos = scanner.pos
           str = scanner.scan(REGEXP_RESERVED)
           tokens << Token.new(TOKEN_RESERVED, str, pos)
+          next
         end
+
+        raise ArgumentError, 'Unexpected character'
       end
 
       tokens << Token.new(TOKEN_EOF, '', scanner.pos)
@@ -79,13 +83,12 @@ module Rcalc
       raise ArgumentError, 'input_str should be String' unless input_str.is_a? String
       @l = Lexer.new(input_str)
       l.tokenize
-      @ast = parse
     end
 
     attr_accessor :ast
 
     def parse
-      expr
+      @ast ||= expr
     end
 
     def print_ast
@@ -163,5 +166,37 @@ module Rcalc
 
       node
     end
+  end
+
+  class Evaluator
+    def initialize(input_str)
+      p = Parser.new(input_str)
+      p.parse
+      @ast = p.ast
+    end
+
+    def eval
+      _eval(ast)
+    end
+
+    private
+
+    attr_reader :ast
+
+    def _eval(ast)
+      case ast.kind
+      when NODE_NUM
+        ast.val
+      when NODE_ADD
+        _eval(ast.left) + _eval(ast.right)
+      when NODE_SUB
+        _eval(ast.left) - _eval(ast.right)
+      when NODE_MUL
+        _eval(ast.left) * _eval(ast.right)
+      when NODE_DIV
+        _eval(ast.left) / _eval(ast.right)
+      end
+    end
+
   end
 end
