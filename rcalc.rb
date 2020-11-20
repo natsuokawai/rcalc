@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'strscan'
 
 module Rcalc
@@ -6,22 +8,23 @@ module Rcalc
       kind == TOKEN_EOF
     end
   end
-  TOKEN_NUM      = 'TOKEN_NUM'.freeze
-  TOKEN_RESERVED = 'TOKEN_RESERVED'.freeze
-  TOKEN_EOF      = 'TOKEN_EOF'.freeze
+  TOKEN_NUM      = 'TOKEN_NUM'
+  TOKEN_RESERVED = 'TOKEN_RESERVED'
+  TOKEN_EOF      = 'TOKEN_EOF'
 
   class Lexer
     REGEXP_NUM      = /\d+/.freeze
-    REGEXP_RESERVED = /[\+\-\*\/\(\)]/.freeze
+    REGEXP_RESERVED = %r{[+\-*/()]}.freeze
 
     def initialize(input_str)
       raise ArgumentError, 'input_str should be String' unless input_str.is_a? String
+
       @scanner = StringScanner.new(input_str)
       @tokens  = []
       @cur_pos = 0
     end
 
-    attr_accessor :tokens, :cur_tok
+    attr_accessor :tokens
 
     def tokenize
       until scanner.eos?
@@ -69,6 +72,7 @@ module Rcalc
 
     attr_reader :scanner, :cur_pos
   end
+
   Node = Struct.new(:kind, :val, :left, :right)
   NODE_NUM = 'NODE_NUM'
   NODE_ADD = 'NODE_ADD'
@@ -80,7 +84,6 @@ module Rcalc
 
   class Parser
     def initialize(input_str)
-      raise ArgumentError, 'input_str should be String' unless input_str.is_a? String
       @l = Lexer.new(input_str)
       l.tokenize
     end
@@ -89,6 +92,8 @@ module Rcalc
 
     def parse
       @ast ||= expr
+
+      raise ParseError, 'Extra token' unless l.cur_tok.eof?
     end
 
     def print_ast
@@ -107,7 +112,7 @@ module Rcalc
     # add = mul ("+" mul | "-" mul)*
     def add
       node = mul
-      
+
       loop do
         case l.cur_tok.str
         when '+'
@@ -133,12 +138,10 @@ module Rcalc
         when '*'
           l.next_token!
           node = Node.new(NODE_MUL, nil, node, primary)
-          #l.next_token!
           next
         when '/'
           l.next_token!
           node = Node.new(NODE_DIV, nil, node, primary)
-          #l.next_token!
           next
         else
           return node
@@ -149,7 +152,7 @@ module Rcalc
     # primary = num | "(" expr ")"
     def primary
       tok = l.cur_tok
-      
+
       if tok.kind == TOKEN_NUM
         node = Node.new(NODE_NUM, tok.str.to_i)
         l.next_token!
@@ -157,13 +160,13 @@ module Rcalc
       end
 
       raise ParseError, 'Expected "("' unless tok.str == '('
-      l.next_token!
 
+      l.next_token! # skip "("
       node = expr
 
       raise ParseError, 'Expected ")"' unless l.cur_tok.str == ')'
-      l.next_token!
 
+      l.next_token! # skip ")"
       node
     end
   end
@@ -197,6 +200,5 @@ module Rcalc
         _eval(ast.left) / _eval(ast.right)
       end
     end
-
   end
 end
