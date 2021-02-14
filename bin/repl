@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 require './rcalc'
 
 line_num = 1
