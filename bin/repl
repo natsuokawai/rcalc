@@ -12,6 +12,6 @@ loop do
 
   print '=> '
   puts Rcalc::Evaluator.new(input).eval
-rescue
-  puts 'error'
+rescue => e
+  puts 'error: ' + e.message
 end
