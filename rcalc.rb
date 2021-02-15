@@ -1,10 +1,18 @@
 # typed: true
 # frozen_string_literal: true
 
+require 'sorbet-runtime'
 require 'strscan'
 
 module Rcalc
-  Token = Struct.new(:kind, :str, :pos) do
+  class Token < T::Struct
+    extend T::Sig
+
+    prop :kind, String
+    prop :str, String
+    prop :pos, Integer
+
+    sig { returns(T::Boolean) }
     def eof?
       kind == TOKEN_EOF
     end
@@ -14,19 +22,22 @@ module Rcalc
   TOKEN_EOF      = 'TOKEN_EOF'
 
   class Lexer
+    extend T::Sig
+
     REGEXP_NUM      = /\d+/.freeze
     REGEXP_RESERVED = %r{[+\-*/()]}.freeze
 
+    sig { params(input_str: String).void }
     def initialize(input_str)
-      raise ArgumentError, 'input_str should be String' unless input_str.is_a? String
-
       @scanner = StringScanner.new(input_str)
-      @tokens  = []
-      @cur_pos = 0
+      @tokens  = T.let([], T::Array[Token])
+      @cur_pos = T.let(0, Integer)
     end
 
+    sig { returns(T::Array[Token]) }
     attr_accessor :tokens
 
+    sig { returns(T::Array[Token]) }
     def tokenize
       until scanner.eos?
         # skip space character
@@ -36,7 +47,7 @@ module Rcalc
         if scanner.check(REGEXP_NUM)
           pos = scanner.pos
           str = scanner.scan(REGEXP_NUM)
-          tokens << Token.new(TOKEN_NUM, str, pos)
+          tokens << Token.new(kind: TOKEN_NUM, str: str, pos: pos)
           next
         end
 
@@ -44,20 +55,22 @@ module Rcalc
         if scanner.check(REGEXP_RESERVED)
           pos = scanner.pos
           str = scanner.scan(REGEXP_RESERVED)
-          tokens << Token.new(TOKEN_RESERVED, str, pos)
+          tokens << Token.new(kind: TOKEN_RESERVED, str: str, pos: pos)
           next
         end
 
         raise ArgumentError, 'Unexpected character'
       end
 
-      tokens << Token.new(TOKEN_EOF, '', scanner.pos)
+      tokens << Token.new(kind: TOKEN_EOF, str: '', pos: scanner.pos)
     end
 
+    sig { returns(T.nilable Integer) }
     def next_token!
       @cur_pos += 1 if @cur_pos < tokens.size - 1
     end
 
+    sig { returns(T.nilable Token) }
     def cur_tok
       tokens[cur_pos]
     end
@@ -71,7 +84,9 @@ module Rcalc
 
     private
 
-    attr_reader :scanner, :cur_pos
+    sig { returns(Integer) }
+    attr_reader :cur_pos
+    attr_reader :scanner
   end
 
   Node = Struct.new(:kind, :val, :left, :right)
