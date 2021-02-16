@@ -89,7 +89,12 @@ module Rcalc
     attr_reader :scanner
   end
 
-  Node = Struct.new(:kind, :val, :left, :right)
+  class Node < T::Struct
+    const :kind,  String
+    prop  :val,   T.nilable(T.any(Integer, Float))
+    prop  :left,  T.nilable(Node)
+    prop  :right, T.nilable(Node)
+  end
   NODE_NUM = 'NODE_NUM'
   NODE_ADD = 'NODE_ADD'
   NODE_SUB = 'NODE_SUB'
@@ -99,6 +104,9 @@ module Rcalc
   class ParseError < StandardError; end
 
   class Parser
+    extend T::Sig
+
+    sig { params(input_str: String).void }
     def initialize(input_str)
       @l = Lexer.new(input_str)
       l.tokenize
@@ -133,11 +141,11 @@ module Rcalc
         case l.cur_tok.str
         when '+'
           l.next_token!
-          node = Node.new(NODE_ADD, nil, node, mul)
+          node = Node.new(kind: NODE_ADD, left: node, right: mul)
           next
         when '-'
           l.next_token!
-          node = Node.new(NODE_SUB, nil, node, mul)
+          node = Node.new(kind: NODE_SUB, left: node, right: mul)
           next
         else
           return node
@@ -153,11 +161,11 @@ module Rcalc
         case l.cur_tok.str
         when '*'
           l.next_token!
-          node = Node.new(NODE_MUL, nil, node, primary)
+          node = Node.new(kind: NODE_MUL, left: node, right: primary)
           next
         when '/'
           l.next_token!
-          node = Node.new(NODE_DIV, nil, node, primary)
+          node = Node.new(kind: NODE_DIV, left: node, right: primary)
           next
         else
           return node
@@ -170,7 +178,7 @@ module Rcalc
       tok = l.cur_tok
 
       if tok.kind == TOKEN_NUM
-        node = Node.new(NODE_NUM, tok.str.to_i)
+        node = Node.new(kind: NODE_NUM, val: tok.str.to_i)
         l.next_token!
         return node
       end
