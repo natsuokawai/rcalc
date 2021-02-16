@@ -8,9 +8,9 @@ module Rcalc
   class Token < T::Struct
     extend T::Sig
 
-    prop :kind, String
-    prop :str, String
-    prop :pos, Integer
+    const :kind, String
+    const :str,  String
+    const :pos,  Integer
 
     sig { returns(T::Boolean) }
     def eof?
